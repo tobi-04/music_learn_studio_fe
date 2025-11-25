@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { User, LoginCredentials, RegisterData } from "~/types/auth";
+import type { User, LoginCredentials, RegisterData, AuthResponse } from "~/types/auth";
 
 interface CacheItem<T> {
   data: T;
@@ -65,11 +65,7 @@ export const useAuthStore = defineStore("auth", {
     /**
      * Lưu auth data vào localStorage
      */
-    _saveToLocalStorage(
-      token: string,
-      user: User,
-      refreshToken?: string
-    ): void {
+    _saveToLocalStorage(token: string, user: User, refreshToken?: string): void {
       if (import.meta.client) {
         localStorage.setItem("auth_token", token);
         localStorage.setItem("auth_user", JSON.stringify(user));
@@ -97,29 +93,24 @@ export const useAuthStore = defineStore("auth", {
      * - Lưu cache user
      * - Xóa cache nếu thất bại
      */
-    async login(
-      credentials: LoginCredentials
-    ): Promise<{ success: boolean; data?: any; error?: string }> {
+    async login(credentials: LoginCredentials): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
       this.loading = true;
       this.error = null;
 
       try {
         const { loginApi } = useAuthApi();
-        const response = await loginApi(
-          credentials.usernameOrEmail,
-          credentials.password
-        );
+        const response = await loginApi(credentials.usernameOrEmail, credentials.password);
 
-        const { data } = response as any;
+        const data = response.data;
 
         // Cập nhật state
         this.user = data.user;
         this.token = data.token;
-        this.refreshToken = data.refreshToken;
+        this.refreshToken = null; // Backend không trả refresh token
         this.isAuthenticated = true;
 
         // Lưu localStorage
-        this._saveToLocalStorage(data.token, data.user, data.refreshToken);
+        this._saveToLocalStorage(data.token, data.user);
 
         // Cập nhật cache
         this._setCacheUser(data.user);
@@ -145,9 +136,7 @@ export const useAuthStore = defineStore("auth", {
      * - Lưu cache user
      * - Xóa cache nếu thất bại
      */
-    async register(
-      registerData: RegisterData
-    ): Promise<{ success: boolean; data?: any; error?: string }> {
+    async register(registerData: RegisterData): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
       this.loading = true;
       this.error = null;
 
@@ -158,19 +147,19 @@ export const useAuthStore = defineStore("auth", {
           registerData.username,
           registerData.email,
           registerData.password,
-          registerData.avatar
+          registerData.avatar,
         );
 
-        const { data } = response as any;
+        const data = response.data;
 
         // Cập nhật state
         this.user = data.user;
         this.token = data.token;
-        this.refreshToken = data.refreshToken;
+        this.refreshToken = null; // Backend không trả refresh token
         this.isAuthenticated = true;
 
         // Lưu localStorage
-        this._saveToLocalStorage(data.token, data.user, data.refreshToken);
+        this._saveToLocalStorage(data.token, data.user);
 
         // Cập nhật cache
         this._setCacheUser(data.user);
@@ -217,7 +206,7 @@ export const useAuthStore = defineStore("auth", {
         const { getCurrentUserApi } = useAuthApi();
         const response = await getCurrentUserApi(this.token);
 
-        const userData = (response as any).data || response;
+        const userData = response.data;
 
         // Cập nhật state
         this.user = userData;
@@ -228,8 +217,7 @@ export const useAuthStore = defineStore("auth", {
         return { success: true, data: userData };
       } catch (error: unknown) {
         const apiError = error as { data?: ApiErrorData };
-        this.error =
-          apiError.data?.message || "Lỗi khi tải thông tin người dùng";
+        this.error = apiError.data?.message || "Lỗi khi tải thông tin người dùng";
 
         // Xóa cache khi lỗi
         this._clearCache();
@@ -255,7 +243,7 @@ export const useAuthStore = defineStore("auth", {
         }
       } catch (error) {
         // Ignore logout API errors
-        console.error("Logout API error:", error);
+        console.warn("Logout API error:", error);
       } finally {
         // Luôn clear state và localStorage
         this.user = null;
@@ -279,7 +267,7 @@ export const useAuthStore = defineStore("auth", {
      */
     async refreshAuthToken(): Promise<{
       success: boolean;
-      data?: any;
+      data?: { token: string; refreshToken?: string };
       error?: string;
     }> {
       if (!this.refreshToken) {
@@ -290,11 +278,11 @@ export const useAuthStore = defineStore("auth", {
         const { refreshTokenApi } = useAuthApi();
         const response = await refreshTokenApi(this.refreshToken);
 
-        const { data } = response as any;
+        const data = response.data;
 
         // Cập nhật token mới
         this.token = data.token;
-        this.refreshToken = data.refreshToken;
+        this.refreshToken = data.refreshToken ?? null;
 
         // Cập nhật localStorage
         if (import.meta.client && this.user) {
@@ -340,7 +328,7 @@ export const useAuthStore = defineStore("auth", {
 
             // Set cache từ localStorage
             this._setCacheUser(user);
-          } catch (error) {
+          } catch {
             // Nếu parse lỗi, clear localStorage
             this._clearLocalStorage();
           }

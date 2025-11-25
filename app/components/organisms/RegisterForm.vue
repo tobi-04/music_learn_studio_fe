@@ -1,10 +1,10 @@
 <template>
   <UCard>
     <template #header>
-      <h2 class="text-2xl font-bold text-center">Đăng ký tài khoản</h2>
+      <h2 class="text-2xl font-bold text-center mb-2">Đăng ký tài khoản</h2>
     </template>
 
-    <form class="space-y-4" @submit.prevent="handleSubmit">
+    <form class="space-y-6" @submit.prevent="handleSubmit">
       <AppAlert
         v-if="authStore.error"
         :title="authStore.error"
@@ -73,9 +73,9 @@
         </template>
       </UCheckbox>
 
-      <AppButton type="submit" :loading="authStore.loading" block>
+      <UButton type="submit" :loading="authStore.loading" block>
         Đăng ký
-      </AppButton>
+      </UButton>
 
       <div class="text-center text-sm">
         Đã có tài khoản?
@@ -191,6 +191,8 @@ const handleSubmit = async () => {
     return;
   }
 
+  // Register - Backend sẽ tự động tạo với role STUDENT
+  // Không cho phép client chọn role để bảo mật
   const result = await authStore.register({
     name: form.name,
     username: form.username,
@@ -199,7 +201,8 @@ const handleSubmit = async () => {
   });
 
   if (result.success) {
-    await router.push("/dashboard");
+    // Redirect to student courses after successful registration
+    await router.push("/student/courses");
   }
 };
 </script>

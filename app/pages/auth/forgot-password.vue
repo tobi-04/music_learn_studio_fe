@@ -33,9 +33,9 @@
           required
           :error="emailError" />
 
-        <AppButton type="submit" :loading="loading" block>
+        <UButton type="submit" :loading="loading" block>
           Gửi hướng dẫn
-        </AppButton>
+        </UButton>
 
         <div class="text-center text-sm">
           <NuxtLink to="/auth/login" class="text-primary-500 hover:underline">

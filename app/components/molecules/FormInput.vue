@@ -1,79 +1,31 @@
 <template>
-  <div class="form-input">
-    <AppLabel v-if="label" :id="id" :text="label" :required="required" />
-
+  <UForm :label="label" :error="error" :required="required">
     <AppInput
-      :id="id"
       v-model="internalValue"
-      :type="type"
+      class="w-full"
       :placeholder="placeholder"
-      :disabled="disabled"
-      :icon="icon"
-      :trailing-icon="trailingIcon"
-      :color="hasError ? 'red' : 'primary'"
-      @blur="handleBlur" />
-
-    <p v-if="hasError" class="mt-1 text-sm text-red-500">
-      {{ error }}
-    </p>
-
-    <p v-else-if="hint" class="mt-1 text-sm text-gray-500">
-      {{ hint }}
-    </p>
-  </div>
+      :type="type"
+      :disabled="disabled" />
+  </UForm>
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: "",
-  },
-  label: {
-    type: String,
-    default: undefined,
-  },
-  type: {
-    type: String,
-    default: "text",
-  },
-  placeholder: {
-    type: String,
-    default: undefined,
-  },
-  disabled: Boolean,
-  required: Boolean,
-  error: {
-    type: String,
-    default: undefined,
-  },
-  hint: {
-    type: String,
-    default: undefined,
-  },
-  icon: {
-    type: String,
-    default: undefined,
-  },
-  trailingIcon: {
-    type: String,
-    default: undefined,
-  },
-});
+const props = defineProps<{
+  label: string;
+  modelValue?: string | number;
+  error?: string;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  disabled?: boolean;
+}>();
 
-const emit = defineEmits(["update:modelValue", "blur"]);
-
-// Generate a stable ID using useId() to avoid hydration mismatch
-const id = useId();
+const emit = defineEmits<{
+  "update:modelValue": [value: string | number];
+}>();
 
 const internalValue = computed({
   get: () => props.modelValue,
-  set: (value) => emit("update:modelValue", value),
+  set: (value) => emit("update:modelValue", value as string | number),
 });
-
-const hasError = computed(() => !!props.error);
-
-const handleBlur = () => {
-  emit("blur");
-};
 </script>

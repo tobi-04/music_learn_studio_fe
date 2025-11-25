@@ -40,9 +40,9 @@
         </NuxtLink>
       </div>
 
-      <AppButton type="submit" :loading="authStore.loading" block>
+      <UButton type="submit" :loading="authStore.loading" block>
         Đăng nhập
-      </AppButton>
+      </UButton>
 
       <div class="text-center text-sm">
         Chưa có tài khoản?
