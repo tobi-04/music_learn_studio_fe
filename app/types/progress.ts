@@ -6,6 +6,7 @@ export interface UserCourseProgressResponse {
   id: string;
   userId: string;
   courseId: string;
+  courseTitle?: string;
   progressPercentage: number;
   completedChapters: number;
   totalChapters: number;

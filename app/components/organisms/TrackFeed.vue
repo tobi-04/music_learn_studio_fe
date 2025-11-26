@@ -51,13 +51,14 @@
         :track="track"
         :show-delete="showDelete"
         @play="handlePlay"
+        @edit="$emit('edit', $event)"
         @delete="handleDelete" />
     </div>
 
     <!-- Load more -->
     <div v-if="hasMore && !loading" class="flex justify-center">
       <UButton
-        color="gray"
+        color="neutral"
         variant="outline"
         :loading="loadingMore"
         @click="$emit('loadMore')">
@@ -97,6 +98,7 @@ const emit = defineEmits<{
   upload: [];
   loadMore: [];
   delete: [trackId: string];
+  edit: [track: MusicTrack];
 }>();
 
 function handlePlay(trackId: string) {

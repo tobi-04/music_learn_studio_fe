@@ -11,7 +11,7 @@
         </div>
 
         <!-- Tabs -->
-        <UTabs :items="tabs" class="w-full">
+        <UTabs v-model="selectedTab" :items="tabs" class="w-full">
           <!-- Trending Tab -->
           <template #trending>
             <div class="space-y-4">
@@ -79,10 +79,25 @@
                   to="/music/studio">
                   Open Studio
                 </UButton>
-                <UButton color="primary" @click="showUploadModal = true">
-                  <Upload class="w-4 h-4 mr-2" />
+                <UButton
+                  color="primary"
+                  icon="i-lucide-upload"
+                  @click="showUploadModal = true">
                   Upload New Track
                 </UButton>
+                <!-- Upload Modal -->
+                <UModal
+                  v-model:open="showUploadModal"
+                  :ui="{
+                    content: 'max-w-3xl',
+                  }">
+                  <template #content>
+                    <MusicUploadForm
+                      :initial-data="editingTrack"
+                      @close="handleUploadModalClose"
+                      @success="handleUploadSuccess" />
+                  </template>
+                </UModal>
               </div>
 
               <div v-if="loadingMyTracks" class="text-center py-8">
@@ -102,24 +117,13 @@
                   :loading="loadingMyTracks"
                   :show-delete="true"
                   @play="playTrack"
+                  @edit="handleEditTrack"
                   @delete="handleDeleteTrack" />
               </div>
             </div>
           </template>
         </UTabs>
       </div>
-
-      <!-- Upload Modal -->
-      <UModal v-model:open="showUploadModal">
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-semibold">Upload New Track</h3>
-          </template>
-          <MusicUploadForm
-            @close="showUploadModal = false"
-            @success="handleUploadSuccess" />
-        </UCard>
-      </UModal>
 
       <!-- Global Player (fixed bottom) -->
       <div
@@ -148,11 +152,16 @@
               <TrackPlayer
                 :is-playing="isPlaying"
                 :is-liked="isLiked"
+                :is-looping="isLooping"
                 :current-time="currentTime"
                 :duration="currentTrack.duration * 60"
+                :volume="volume"
                 @toggle-play="togglePlay"
                 @toggle-like="toggleLike"
-                @share="shareTrack" />
+                @toggle-loop="toggleLoop"
+                @share="shareTrack"
+                @seek="seek"
+                @volume-change="updateVolume" />
             </div>
           </div>
         </UContainer>
@@ -162,28 +171,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { Upload } from "lucide-vue-next";
 import type { MusicTrack } from "~/types/music";
 
+const route = useRoute();
+const router = useRouter();
 const {
   getTrendingTracks,
   getMyTracks,
   getRecentTracks,
   recordListening,
   deleteTrack,
+  updateTrack,
+  toggleLike: apiToggleLike,
+  getLikeStatus,
 } = useMusicApi();
 
 const tabs = [
   {
-    key: "0",
+    value: "trending",
     label: "Trending",
     icon: "i-lucide-trending-up",
     slot: "trending",
   },
-  { key: "1", label: "Recent", icon: "i-lucide-clock", slot: "recent" },
+  { value: "recent", label: "Recent", icon: "i-lucide-clock", slot: "recent" },
   {
-    key: "2",
+    value: "my-music",
     label: "My Music",
     icon: "i-lucide-music",
     slot: "my-music",
@@ -215,16 +229,64 @@ const loadingRecent = ref(false);
 const loadingMyTracks = ref(false);
 
 const showUploadModal = ref(false);
+const editingTrack = ref<MusicTrack | null>(null);
 const currentTrack = ref<MusicTrack | null>(null);
 const isPlaying = ref(false);
 const isLiked = ref(false);
+const isLooping = ref(false);
 const currentTime = ref(0);
+const volume = ref(80);
+const audioPlayer = ref<HTMLAudioElement | null>(null);
+
+// Tab Sync Logic
+const selectedTab = computed({
+  get: () => {
+    return (route.query.tab as string) || "trending";
+  },
+  set: (value) => {
+    router.replace({ query: { ...route.query, tab: value } });
+  },
+});
 
 onMounted(() => {
   loadTrendingTracks();
   loadRecentTracks();
   loadMyTracks();
+
+  // Initialize audio player
+  audioPlayer.value = new Audio();
+  audioPlayer.value.volume = volume.value / 100;
+  audioPlayer.value.addEventListener("timeupdate", updateProgress);
+  audioPlayer.value.addEventListener("ended", handleTrackEnded);
+  audioPlayer.value.addEventListener("loadedmetadata", () => {
+    // Duration is handled by track metadata, but we could verify here
+  });
 });
+
+onUnmounted(() => {
+  if (audioPlayer.value) {
+    audioPlayer.value.pause();
+    audioPlayer.value.removeEventListener("timeupdate", updateProgress);
+    audioPlayer.value.removeEventListener("ended", handleTrackEnded);
+    audioPlayer.value = null;
+  }
+});
+
+function updateProgress() {
+  if (audioPlayer.value) {
+    currentTime.value = audioPlayer.value.currentTime;
+  }
+}
+
+function handleTrackEnded() {
+  if (isLooping.value && audioPlayer.value) {
+    audioPlayer.value.currentTime = 0;
+    audioPlayer.value.play();
+  } else {
+    isPlaying.value = false;
+    currentTime.value = 0;
+  }
+}
 
 async function loadTrendingTracks() {
   loadingTrending.value = true;
@@ -270,8 +332,32 @@ async function playTrack(trackId: string) {
   const track = allTracks.find((t) => t.id === trackId);
 
   if (track) {
+    // If clicking the same track, toggle play/pause
+    if (currentTrack.value?.id === track.id) {
+      togglePlay();
+      return;
+    }
+
     currentTrack.value = track;
     isPlaying.value = true;
+    currentTime.value = 0;
+    // Reset like state for new track (TODO: fetch actual like state)
+    isLiked.value = false;
+
+    if (audioPlayer.value) {
+      audioPlayer.value.src = track.fileUrl;
+      audioPlayer.value
+        .play()
+        .catch((e) => console.error("Playback failed:", e));
+    }
+
+    // Fetch like status
+    try {
+      const status = await getLikeStatus(trackId);
+      isLiked.value = status.liked;
+    } catch (error) {
+      console.error("Failed to fetch like status:", error);
+    }
 
     // Record listening event
     try {
@@ -285,15 +371,56 @@ async function playTrack(trackId: string) {
 }
 
 function togglePlay() {
-  isPlaying.value = !isPlaying.value;
+  if (audioPlayer.value) {
+    if (isPlaying.value) {
+      audioPlayer.value.pause();
+    } else {
+      audioPlayer.value.play();
+    }
+    isPlaying.value = !isPlaying.value;
+  }
 }
 
-function toggleLike() {
-  isLiked.value = !isLiked.value;
+function seek(time: number) {
+  if (audioPlayer.value) {
+    audioPlayer.value.currentTime = time;
+    currentTime.value = time;
+  }
+}
+
+function updateVolume(volume: number) {
+  if (audioPlayer.value) {
+    audioPlayer.value.volume = volume / 100;
+  }
+}
+
+async function toggleLike() {
+  if (currentTrack.value) {
+    // Optimistic update
+    const previousState = isLiked.value;
+    isLiked.value = !isLiked.value;
+
+    try {
+      const result = await apiToggleLike(currentTrack.value.id);
+      isLiked.value = result.liked;
+      // Update like count
+      if (currentTrack.value) {
+        currentTrack.value.likeCount = result.likeCount;
+      }
+    } catch (e) {
+      console.error("Failed to toggle like:", e);
+      isLiked.value = previousState; // Revert on error
+    }
+  }
+}
+
+function toggleLoop() {
+  isLooping.value = !isLooping.value;
 }
 
 function shareTrack() {
   console.log("Share track");
+  // TODO: Implement share logic
 }
 
 async function handleDeleteTrack(trackId: string) {
@@ -313,10 +440,21 @@ async function handleDeleteTrack(trackId: string) {
   }
 }
 
+function handleEditTrack(track: MusicTrack) {
+  editingTrack.value = track;
+  showUploadModal.value = true;
+}
+
+function handleUploadModalClose() {
+  showUploadModal.value = false;
+  editingTrack.value = null;
+}
+
 function handleUploadSuccess() {
-  // Reload my tracks after successful upload
+  // Reload my tracks after successful upload/update
   loadMyTracks();
   // Also reload trending
   loadTrendingTracks();
+  handleUploadModalClose();
 }
 </script>

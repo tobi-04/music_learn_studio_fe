@@ -26,16 +26,6 @@
               @click="saveComposition">
               Save Draft
             </UButton>
-            <UButton
-              color="primary"
-              icon="i-lucide-upload"
-              :loading="publishing"
-              @click="showPublishModal = true"
-              :disabled="
-                !currentComposition || tracks.every((t) => t.notes.length === 0)
-              ">
-              Publish
-            </UButton>
           </div>
         </div>
 
@@ -63,6 +53,10 @@
               <USelect
                 v-model="musicalKey"
                 :items="keyOptions"
+                class="w-fit"
+                :ui="{
+                  content: 'w-fit',
+                }"
                 @change="autoSave" />
             </div>
             <div>
@@ -70,6 +64,9 @@
               <USelect
                 v-model="scale"
                 :items="scaleOptions"
+                :ui="{
+                  content: 'w-fit',
+                }"
                 @change="autoSave" />
             </div>
           </div>
@@ -97,17 +94,6 @@
                 {{ formatTime(currentTime) }} / {{ formatTime(totalDuration) }}
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm">Volume:</span>
-              <input
-                v-model.number="masterVolume"
-                type="range"
-                min="0"
-                max="100"
-                class="w-32"
-                @input="updateMasterVolume" />
-              <span class="text-sm w-8">{{ masterVolume }}%</span>
-            </div>
             <div class="flex gap-2">
               <UButton
                 icon="i-lucide-download"
@@ -117,6 +103,15 @@
                 @click="downloadMIDI">
                 Export MIDI
               </UButton>
+              <UButton
+                icon="i-lucide-music"
+                color="primary"
+                variant="solid"
+                :loading="exporting"
+                :disabled="tracks.every((t) => t.notes.length === 0)"
+                @click="downloadWAV">
+                Export WAV
+              </UButton>
             </div>
           </div>
         </UCard>
@@ -125,13 +120,54 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold">Tracks</h2>
-            <UButton
-              icon="i-lucide-plus"
-              color="neutral"
-              variant="outline"
-              @click="showAddTrackModal = true">
-              Add Track
-            </UButton>
+            <UModal v-model:open="showAddTrackModal" title="Thêm track mới">
+              <UButton
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="outline"
+                @click="showAddTrackModal = true">
+                Add Track
+              </UButton>
+              <template #body>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1"
+                      >Track Name</label
+                    >
+                    <UInput
+                      v-model="newTrackName"
+                      placeholder="Piano, Drums, Bass..."
+                      class="w-full" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1"
+                      >Instrument</label
+                    >
+                    <USelect
+                      v-model="newTrackInstrument"
+                      :items="instrumentOptions"
+                      class="w-full" />
+                  </div>
+                </div>
+              </template>
+
+              <template #footer>
+                <div class="flex justify-end gap-2">
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    @click="showAddTrackModal = false">
+                    Cancel
+                  </UButton>
+                  <UButton
+                    color="primary"
+                    :disabled="!newTrackName"
+                    @click="addTrack">
+                    Add Track
+                  </UButton>
+                </div>
+              </template>
+            </UModal>
           </div>
 
           <div v-for="track in tracks" :key="track.id" class="space-y-2">
@@ -216,7 +252,7 @@
                       ]"
                       @mousedown="playNote(track.id, note.name)"
                       @mouseup="stopNote(track.id)"
-                      @mouseleave="stopNote(track.id)"></div>
+                      @mouseleave="stopNote(track.id)" />
                   </div>
                 </div>
               </div>
@@ -225,93 +261,6 @@
         </div>
       </div>
     </UContainer>
-
-    <!-- Add Track Modal -->
-    <ClientOnly>
-      <UModal v-model:open="showAddTrackModal">
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-semibold">Add New Track</h3>
-          </template>
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-1">Track Name</label>
-              <UInput
-                v-model="newTrackName"
-                placeholder="Piano, Drums, Bass..." />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">Instrument</label>
-              <USelect
-                v-model="newTrackInstrument"
-                :items="instrumentOptions" />
-            </div>
-          </div>
-
-          <template #footer>
-            <div class="flex justify-end gap-2">
-              <UButton
-                color="neutral"
-                variant="outline"
-                @click="showAddTrackModal = false">
-                Cancel
-              </UButton>
-              <UButton
-                color="primary"
-                :disabled="!newTrackName"
-                @click="addTrack">
-                Add Track
-              </UButton>
-            </div>
-          </template>
-        </UCard>
-      </UModal>
-    </ClientOnly>
-
-    <!-- Publish Modal -->
-    <ClientOnly>
-      <UModal v-model:open="showPublishModal">
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-semibold">Publish Composition</h3>
-          </template>
-
-          <div class="space-y-4">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Your composition will be exported to MP3 and published to your
-              library.
-            </p>
-            <div>
-              <label class="block text-sm font-medium mb-1">Make Public</label>
-              <div class="flex items-center gap-2 mt-2">
-                <input v-model="isPublic" type="checkbox" class="rounded" />
-                <span class="text-sm"
-                  >Allow others to see and play this composition</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <template #footer>
-            <div class="flex justify-end gap-2">
-              <UButton
-                color="neutral"
-                variant="outline"
-                @click="showPublishModal = false">
-                Cancel
-              </UButton>
-              <UButton
-                color="primary"
-                :loading="publishing"
-                @click="publishComposition">
-                Publish
-              </UButton>
-            </div>
-          </template>
-        </UCard>
-      </UModal>
-    </ClientOnly>
   </div>
 </template>
 
@@ -329,7 +278,6 @@ import { exportToMIDI } from "~/utils/midiExport";
 import { useCompositionApi } from "~/composables/api/useCompositionApi";
 
 const route = useRoute();
-const router = useRouter();
 const api = useCompositionApi();
 
 // Composition state
@@ -344,7 +292,6 @@ const isPublic = ref(false);
 const isPlaying = ref(false);
 const currentTime = ref(0);
 const totalDuration = ref(16); // 16 beats
-const masterVolume = ref(80);
 
 // Track state
 const tracks = ref<Track[]>([]);
@@ -352,9 +299,8 @@ const currentBeat = ref(0);
 
 // UI state
 const saving = ref(false);
-const publishing = ref(false);
+const exporting = ref(false);
 const showAddTrackModal = ref(false);
-const showPublishModal = ref(false);
 const newTrackName = ref("");
 const newTrackInstrument = ref("Synth");
 
@@ -410,8 +356,34 @@ onMounted(async () => {
   if (compositionId) {
     await loadComposition(compositionId);
   } else {
-    // Create initial track
-    addTrack();
+    // Load or create draft
+    try {
+      const response = await api.getOrCreateDraft();
+      const draft = response.data;
+      currentComposition.value = draft;
+      compositionTitle.value = draft.title;
+      bpm.value = draft.bpm;
+      musicalKey.value = draft.key || "C";
+      scale.value = draft.scale || "Major";
+      isPublic.value = draft.isPublic;
+      tracks.value = draft.tracks || [];
+
+      // Initialize instruments for loaded tracks
+      tracks.value.forEach((track) => {
+        if (!instruments.has(track.id)) {
+          createInstrument(track.id, track.instrument);
+        }
+      });
+
+      // If no tracks, add initial one
+      if (tracks.value.length === 0) {
+        addTrack();
+      }
+    } catch (error) {
+      console.error("Failed to load draft:", error);
+      // Fallback to empty state
+      addTrack();
+    }
   }
 
   // Setup transport for playback
@@ -573,10 +545,6 @@ function updateTrackVolume(trackId: string) {
   }
 }
 
-function updateMasterVolume() {
-  Tone.Destination.volume.value = (masterVolume.value / 100) * 10 - 10;
-}
-
 function updateTempo() {
   Tone.Transport.bpm.value = bpm.value;
   autoSave();
@@ -696,30 +664,33 @@ function downloadMIDI() {
   }
 }
 
-async function publishComposition() {
-  if (!currentComposition.value) {
-    alert("Please save your composition first");
+async function downloadWAV() {
+  if (tracks.value.every((t) => t.notes.length === 0)) {
+    alert("No notes to export");
     return;
   }
 
-  publishing.value = true;
+  exporting.value = true;
   try {
-    // Export to audio (simplified - in production, use proper rendering)
+    // Export to audio (WAV format)
     const audioBlob = await exportToAudio();
-    const audioFile = new File([audioBlob], `${compositionTitle.value}.mp3`, {
-      type: "audio/mpeg",
-    });
 
-    await api.publishComposition(currentComposition.value.id, audioFile);
+    // Create download link
+    const url = URL.createObjectURL(audioBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${compositionTitle.value || "composition"}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    alert("Composition published successfully!");
-    showPublishModal.value = false;
-    router.push("/music/compositions");
+    alert("Export successful!");
   } catch (error) {
-    console.error("Failed to publish composition:", error);
-    alert("Failed to publish composition");
+    console.error("Failed to export WAV:", error);
+    alert("Failed to export WAV");
   } finally {
-    publishing.value = false;
+    exporting.value = false;
   }
 }
 

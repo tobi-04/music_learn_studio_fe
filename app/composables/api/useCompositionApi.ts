@@ -7,7 +7,29 @@ import type {
 
 export const useCompositionApi = () => {
   const config = useRuntimeConfig();
+  const authStore = useAuthStore();
   const baseUrl = config.public.apiBase || "http://localhost:6888";
+
+  /**
+   * Get headers with user authentication
+   */
+  const getHeaders = () => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const user = authStore.user;
+    const token = authStore.token;
+
+    if (user?.id) {
+      headers["X-User-Id"] = user.id;
+    }
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    return headers;
+  };
 
   /**
    * Create a new composition
@@ -18,9 +40,20 @@ export const useCompositionApi = () => {
       {
         method: "POST",
         body: data,
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
+      }
+    );
+  };
+
+  /**
+   * Get or create a draft composition
+   */
+  const getOrCreateDraft = async () => {
+    return await $fetch<BaseResponse<MusicComposition>>(
+      `${baseUrl}/api/v1/music/compositions/draft`,
+      {
+        method: "GET",
+        headers: getHeaders(),
       }
     );
   };
@@ -37,9 +70,7 @@ export const useCompositionApi = () => {
       {
         method: "PUT",
         body: data,
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
   };
@@ -52,9 +83,7 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/${compositionId}`,
       {
         method: "GET",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
   };
@@ -67,9 +96,7 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/my-compositions`,
       {
         method: "GET",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
     return response.data;
@@ -83,9 +110,7 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/my-drafts`,
       {
         method: "GET",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
     return response.data;
@@ -99,9 +124,7 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/my-published`,
       {
         method: "GET",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
     return response.data;
@@ -127,14 +150,16 @@ export const useCompositionApi = () => {
     const formData = new FormData();
     formData.append("audioFile", audioFile);
 
+    const headers = getHeaders();
+    // Remove Content-Type for multipart/form-data
+    delete headers["Content-Type"];
+
     return await $fetch<BaseResponse<MusicComposition>>(
       `${baseUrl}/api/v1/music/compositions/${compositionId}/publish`,
       {
         method: "POST",
         body: formData,
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers,
       }
     );
   };
@@ -147,9 +172,7 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/${compositionId}`,
       {
         method: "DELETE",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
   };
@@ -162,15 +185,14 @@ export const useCompositionApi = () => {
       `${baseUrl}/api/v1/music/compositions/${compositionId}/duplicate`,
       {
         method: "POST",
-        headers: {
-          "X-User-Id": "user1", // TODO: Get from auth store
-        },
+        headers: getHeaders(),
       }
     );
   };
 
   return {
     createComposition,
+    getOrCreateDraft,
     updateComposition,
     getCompositionById,
     getMyCompositions,

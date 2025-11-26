@@ -1,14 +1,14 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen">
     <!-- Header -->
-    <header class="bg-white border-b sticky top-0 z-10">
+    <header class="border-muted border-b sticky top-0 z-10">
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <UButton
               variant="ghost"
               icon="i-heroicons-arrow-left"
-              @click="router.back()">
+              @click="router.push('/student/courses')">
               Back
             </UButton>
             <h1 class="text-2xl font-bold text-primary-600">
@@ -29,7 +29,7 @@
     <main v-else-if="course" class="container mx-auto px-4 py-8">
       <div class="space-y-6">
         <!-- Course Header -->
-        <div class="bg-white rounded-lg shadow-lg p-8">
+        <div class="border border-muted rounded-lg shadow-lg p-8">
           <div class="flex items-start justify-between mb-6">
             <div class="flex-1">
               <h1 class="text-4xl font-bold mb-3">{{ course.title }}</h1>
@@ -49,9 +49,9 @@
             </div>
             <div class="text-center">
               <div class="text-3xl font-bold text-primary-600">
-                {{ course.durationWeeks }}
+                {{ chapters.length }}
               </div>
-              <div class="text-gray-500 text-sm">Weeks</div>
+              <div class="text-gray-500 text-sm">Published Lessons</div>
             </div>
             <div class="text-center">
               <div class="text-3xl font-bold text-primary-600">
@@ -99,11 +99,11 @@
             <div
               v-for="(chapter, index) in chapters"
               :key="chapter.id"
-              class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              class="border rounded-lg p-4 hover:bg-gray-50 transition-colors border-muted">
               <div class="flex items-start gap-4">
                 <!-- Chapter Number -->
                 <div
-                  class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-lg">
+                  class="shrink-0 w-12 h-12 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-lg">
                   {{ index + 1 }}
                 </div>
 
@@ -125,7 +125,7 @@
                 </div>
 
                 <!-- Lock Icon for Unenrolled -->
-                <div v-if="!isEnrolled" class="flex-shrink-0 text-gray-400">
+                <div v-if="!isEnrolled" class="shrink-0 text-gray-400">
                   <span class="text-2xl">🔒</span>
                 </div>
               </div>
@@ -145,17 +145,22 @@
 <script setup lang="ts">
 import { useCourseStore } from "~/stores/admin/course";
 import { useChapterStore } from "~/stores/admin/chapter";
+import { useProgressApi } from "~/composables/useProgressApi";
+import type { CourseResponse } from "~/types";
 
 const route = useRoute();
 const router = useRouter();
 const courseStore = useCourseStore();
 const chapterStore = useChapterStore();
+const progressApi = useProgressApi();
+const toast = useToast();
 
 const courseId = route.params.id as string;
 const studentName = ref("Student");
-const course = ref(null);
+const course = ref<CourseResponse | null>(null);
 const isEnrolled = ref(false);
 const enrollmentProgress = ref(0);
+const enrolling = ref(false);
 
 const chapters = computed(() =>
   chapterStore.chapters.filter((c) => c.isPublished)
@@ -167,6 +172,18 @@ onMounted(async () => {
     chapterStore.fetchChaptersByCourse(courseId),
   ]);
   course.value = courseStore.currentCourse;
+
+  // Check if already enrolled by getting progress
+  try {
+    const progress = await progressApi.getCourseProgress(courseId);
+    if (progress) {
+      isEnrolled.value = true;
+      enrollmentProgress.value = progress.progressPercentage;
+    }
+  } catch {
+    // Not enrolled yet
+    isEnrolled.value = false;
+  }
 });
 
 const getLevelColor = (level: string) => {
@@ -178,10 +195,26 @@ const getLevelColor = (level: string) => {
   return colors[level] || "gray";
 };
 
-const handleEnroll = () => {
-  // In real app, call enrollment API
-  isEnrolled.value = true;
-  alert("Successfully enrolled in course!");
+const handleEnroll = async () => {
+  enrolling.value = true;
+  try {
+    await progressApi.enrollCourse(courseId);
+    isEnrolled.value = true;
+    toast.add({
+      title: "Enrolled successfully!",
+      description: "You can now start learning this course",
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Failed to enroll:", error);
+    toast.add({
+      title: "Enrollment failed",
+      description: "Please try again",
+      color: "error",
+    });
+  } finally {
+    enrolling.value = false;
+  }
 };
 
 const startLearning = () => {

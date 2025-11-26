@@ -11,10 +11,12 @@
           <Music class="w-16 h-16 text-gray-400" />
         </div>
 
-        <!-- Delete button -->
-        <div v-if="showDelete" class="absolute top-2 right-2">
+        <!-- Edit/Delete buttons -->
+        <div v-if="showDelete" class="absolute top-2 right-2 flex gap-2 z-10">
+          <UButton color="neutral" size="sm" @click.stop="$emit('edit', track)">
+            <Pencil class="w-4 h-4" />
+          </UButton>
           <UButton
-            icon
             color="error"
             size="sm"
             @click.stop="$emit('delete', track.id)">
@@ -25,11 +27,7 @@
         <!-- Play button overlay -->
         <div
           class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity">
-          <UButton
-            icon
-            color="primary"
-            size="xl"
-            @click="$emit('play', track.id)">
+          <UButton color="primary" size="xl" @click="$emit('play', track.id)">
             <Play class="w-8 h-8" />
           </UButton>
         </div>
@@ -55,7 +53,7 @@
         </div>
         <div class="flex items-center gap-1">
           <Clock class="w-4 h-4" />
-          <span>{{ track.duration }} min</span>
+          <span>{{ track.duration.toFixed(1) }} min</span>
         </div>
       </div>
 
@@ -63,7 +61,7 @@
         <UBadge
           v-for="tag in track.tags.slice(0, 3)"
           :key="tag"
-          color="gray"
+          color="neutral"
           variant="subtle"
           size="xs">
           {{ tag }}
@@ -74,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { Play, Music, Heart, Clock, Trash2 } from "lucide-vue-next";
+import { Play, Music, Heart, Clock, Trash2, Pencil } from "lucide-vue-next";
 import type { MusicTrack } from "~/types/music";
 
 interface Props {
@@ -89,6 +87,7 @@ withDefaults(defineProps<Props>(), {
 defineEmits<{
   play: [trackId: string];
   delete: [trackId: string];
+  edit: [track: MusicTrack];
 }>();
 
 function formatNumber(num: number): string {

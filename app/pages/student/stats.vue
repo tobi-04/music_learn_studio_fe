@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen">
     <!-- Header -->
-    <header class="bg-white border-b sticky top-0 z-10">
+    <header class="border-muted border-b sticky top-0 z-10">
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold text-primary-600">MusicLearn Studio</h1>
@@ -12,11 +12,15 @@
               Browse Courses
             </NuxtLink>
             <NuxtLink
+              to="/student/courses/my-courses"
+              class="text-gray-600 hover:text-primary-600">
+              My Courses
+            </NuxtLink>
+            <NuxtLink
               to="/student/progress"
               class="text-gray-600 hover:text-primary-600">
               My Progress
             </NuxtLink>
-            <AppAvatar :name="studentName" size="md" />
           </div>
         </div>
       </div>
@@ -33,336 +37,206 @@
           </p>
         </div>
 
-        <!-- Time Period Filter -->
-        <div class="flex justify-end">
-          <AppSelect
-            v-model="selectedPeriod"
-            :options="periodOptions"
-            class="w-48" />
+        <!-- Loading State -->
+        <div v-if="loading" class="flex justify-center py-12">
+          <UProgress animation="carousel" />
         </div>
 
-        <!-- Overall Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <AppCard class="text-center">
-            <div class="text-4xl font-bold text-blue-600 mb-2">
-              {{ stats.totalLessons }}
-            </div>
-            <div class="text-gray-600">Lessons Completed</div>
-            <div class="text-sm text-green-600 mt-1">
-              +{{ stats.lessonsThisWeek }} this week
-            </div>
-          </AppCard>
+        <template v-else>
+          <!-- Overall Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <UCard class="text-center">
+              <div class="text-4xl font-bold text-blue-600 mb-2">
+                {{ stats.totalCoursesEnrolled }}
+              </div>
+              <div class="text-gray-600">Courses Enrolled</div>
+            </UCard>
 
-          <AppCard class="text-center">
-            <div class="text-4xl font-bold text-green-600 mb-2">
-              {{ stats.totalHours }}
-            </div>
-            <div class="text-gray-600">Learning Hours</div>
-            <div class="text-sm text-green-600 mt-1">
-              +{{ stats.hoursThisWeek }}h this week
-            </div>
-          </AppCard>
+            <UCard class="text-center">
+              <div class="text-4xl font-bold text-green-600 mb-2">
+                {{ stats.completedCourses }}
+              </div>
+              <div class="text-gray-600">Courses Completed</div>
+            </UCard>
 
-          <AppCard class="text-center">
-            <div class="text-4xl font-bold text-primary-600 mb-2">
-              {{ stats.quizzesTaken }}
-            </div>
-            <div class="text-gray-600">Quizzes Taken</div>
-            <div class="text-sm text-gray-500 mt-1">
-              {{ stats.averageScore }}% avg score
-            </div>
-          </AppCard>
+            <UCard class="text-center">
+              <div class="text-4xl font-bold text-primary-600 mb-2">
+                {{ stats.totalChaptersCompleted }}
+              </div>
+              <div class="text-gray-600">Chapters Completed</div>
+            </UCard>
 
-          <AppCard class="text-center">
-            <div class="text-4xl font-bold text-yellow-600 mb-2">
-              {{ stats.currentStreak }}
-            </div>
-            <div class="text-gray-600">Day Streak</div>
-            <div class="text-sm text-gray-500 mt-1">
-              Best: {{ stats.bestStreak }} days
-            </div>
-          </AppCard>
-        </div>
+            <UCard class="text-center">
+              <div class="text-4xl font-bold text-yellow-600 mb-2">
+                {{ stats.completionRate }}%
+              </div>
+              <div class="text-gray-600">Completion Rate</div>
+            </UCard>
+          </div>
 
-        <!-- Learning Activity Chart -->
-        <AppCard>
-          <template #header>
-            <h3 class="text-xl font-semibold">Learning Activity</h3>
-          </template>
+          <!-- Learning Time -->
+          <UCard>
+            <template #header>
+              <h3 class="text-xl font-semibold">Learning Summary</h3>
+            </template>
 
-          <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="text-center p-4 bg-muted rounded-lg">
+                <div class="text-3xl font-bold text-primary-600 mb-2">
+                  {{ formatTime(stats.totalTimeSpentMinutes) }}
+                </div>
+                <div class="text-gray-600">Total Learning Time</div>
+              </div>
+
+              <div class="text-center p-4 bg-muted rounded-lg">
+                <div class="text-3xl font-bold text-blue-600 mb-2">
+                  {{ stats.inProgressCourses }}
+                </div>
+                <div class="text-gray-600">Courses In Progress</div>
+              </div>
+
+              <div class="text-center p-4 bg-muted rounded-lg">
+                <div class="text-3xl font-bold text-green-600 mb-2">
+                  {{ averageProgressPerCourse }}%
+                </div>
+                <div class="text-gray-600">Avg Progress per Course</div>
+              </div>
+            </div>
+          </UCard>
+
+          <!-- Course Progress Details -->
+          <UCard>
+            <template #header>
+              <h3 class="text-xl font-semibold">Course Details</h3>
+            </template>
+
             <div
-              v-for="day in activityData"
-              :key="day.date"
-              class="flex items-center gap-4">
-              <div class="w-24 text-sm text-gray-600">{{ day.date }}</div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <div
-                    class="flex-1 h-8 bg-gray-100 rounded-full overflow-hidden">
+              v-if="courseProgress.length === 0"
+              class="text-center py-8 text-gray-500">
+              <p>No courses to display.</p>
+              <UButton
+                color="primary"
+                class="mt-4"
+                @click="navigateTo('/student/courses')">
+                Start Learning
+              </UButton>
+            </div>
+
+            <div v-else class="space-y-4">
+              <div
+                v-for="course in courseProgress"
+                :key="course.id"
+                class="flex items-center justify-between p-4 border border-muted rounded-lg">
+                <div class="flex-1">
+                  <h4 class="font-semibold">{{ course.courseTitle }}</h4>
+                  <p class="text-sm text-gray-500">
+                    {{ course.completedChapters }}/{{ course.totalChapters }}
+                    chapters
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-6">
+                  <div class="text-center">
                     <div
-                      class="h-full bg-primary-600 transition-all"
-                      :style="{
-                        width: `${(day.minutes / maxMinutes) * 100}%`,
-                      }" />
+                      class="text-2xl font-bold"
+                      :class="getProgressColor(course.progressPercentage)">
+                      {{ Math.round(course.progressPercentage) }}%
+                    </div>
+                    <div class="text-xs text-gray-500">Progress</div>
                   </div>
-                  <div class="w-20 text-sm font-medium text-right">
-                    {{ day.minutes }} min
+
+                  <div class="text-center">
+                    <UBadge :color="course.completedAt ? 'success' : 'info'">
+                      {{ course.completedAt ? "Completed" : "In Progress" }}
+                    </UBadge>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </AppCard>
+          </UCard>
 
-        <!-- Quiz Performance -->
-        <AppCard>
-          <template #header>
-            <h3 class="text-xl font-semibold">Quiz Performance</h3>
-          </template>
-
-          <div class="space-y-4">
-            <div
-              v-for="quiz in quizPerformance"
-              :key="quiz.id"
-              class="flex items-center justify-between p-4 border rounded-lg">
-              <div class="flex-1">
-                <h4 class="font-semibold">{{ quiz.courseName }}</h4>
-                <p class="text-sm text-gray-500">{{ quiz.quizName }}</p>
-              </div>
-
-              <div class="flex items-center gap-6">
-                <div class="text-center">
-                  <div
-                    class="text-2xl font-bold"
-                    :class="getScoreColor(quiz.score)">
-                    {{ quiz.score }}%
-                  </div>
-                  <div class="text-xs text-gray-500">Score</div>
-                </div>
-
-                <div class="text-center">
-                  <div class="text-2xl font-bold text-gray-700">
-                    {{ quiz.attempts }}
-                  </div>
-                  <div class="text-xs text-gray-500">Attempts</div>
-                </div>
-
-                <div class="text-center">
-                  <AppBadge :color="quiz.passed ? 'green' : 'red'">
-                    {{ quiz.passed ? "Passed" : "Failed" }}
-                  </AppBadge>
-                </div>
-              </div>
+          <!-- Empty State for New Users -->
+          <UCard v-if="stats.totalCoursesEnrolled === 0">
+            <div class="text-center py-8">
+              <div class="text-6xl mb-4">📚</div>
+              <h3 class="text-xl font-semibold mb-2">
+                Start Your Learning Journey
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Enroll in courses to start tracking your progress and
+                statistics.
+              </p>
+              <UButton color="primary" @click="navigateTo('/student/courses')">
+                Browse Courses
+              </UButton>
             </div>
-          </div>
-        </AppCard>
-
-        <!-- Skills Progress -->
-        <AppCard>
-          <template #header>
-            <h3 class="text-xl font-semibold">Skills Progress</h3>
-          </template>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-              v-for="skill in skillsProgress"
-              :key="skill.name"
-              class="space-y-2">
-              <div class="flex justify-between">
-                <span class="font-medium">{{ skill.name }}</span>
-                <span class="text-sm text-gray-600">{{ skill.level }}</span>
-              </div>
-              <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  class="h-full rounded-full transition-all"
-                  :class="skill.color"
-                  :style="{ width: `${skill.progress}%` }" />
-              </div>
-              <div class="text-xs text-gray-500">
-                {{ skill.progress }}% complete
-              </div>
-            </div>
-          </div>
-        </AppCard>
-
-        <!-- Achievements -->
-        <AppCard>
-          <template #header>
-            <h3 class="text-xl font-semibold">Achievements</h3>
-          </template>
-
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div
-              v-for="achievement in achievements"
-              :key="achievement.id"
-              class="text-center p-4 border rounded-lg"
-              :class="
-                achievement.unlocked
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-gray-50 opacity-50'
-              ">
-              <div class="flex justify-center mb-2">
-                <UIcon :name="achievement.icon" class="w-10 h-10" />
-              </div>
-              <div class="font-semibold text-sm">{{ achievement.name }}</div>
-              <div class="text-xs text-gray-500 mt-1">
-                {{ achievement.description }}
-              </div>
-            </div>
-          </div>
-        </AppCard>
+          </UCard>
+        </template>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-const studentName = ref("Student");
-const selectedPeriod = ref("last-7-days");
+import { useProgressApi } from "~/composables/useProgressApi";
+import type {
+  UserCourseProgressResponse,
+  StudentStatsResponse,
+} from "~/types/progress";
 
-const periodOptions = [
-  { label: "Last 7 Days", value: "last-7-days" },
-  { label: "Last 30 Days", value: "last-30-days" },
-  { label: "Last 3 Months", value: "last-3-months" },
-  { label: "All Time", value: "all-time" },
-];
+const progressApi = useProgressApi();
 
-const stats = ref({
-  totalLessons: 42,
-  lessonsThisWeek: 8,
-  totalHours: 24,
-  hoursThisWeek: 5,
-  quizzesTaken: 18,
-  averageScore: 87,
-  currentStreak: 7,
-  bestStreak: 14,
+const loading = ref(true);
+const courseProgress = ref<UserCourseProgressResponse[]>([]);
+const stats = ref<StudentStatsResponse>({
+  totalCoursesEnrolled: 0,
+  completedCourses: 0,
+  inProgressCourses: 0,
+  totalChaptersCompleted: 0,
+  totalTimeSpentMinutes: 0,
+  completionRate: 0,
 });
 
-const activityData = ref([
-  { date: "Mon", minutes: 45 },
-  { date: "Tue", minutes: 60 },
-  { date: "Wed", minutes: 30 },
-  { date: "Thu", minutes: 75 },
-  { date: "Fri", minutes: 50 },
-  { date: "Sat", minutes: 90 },
-  { date: "Sun", minutes: 40 },
-]);
+const averageProgressPerCourse = computed(() => {
+  if (courseProgress.value.length === 0) return 0;
+  const total = courseProgress.value.reduce(
+    (sum, c) => sum + c.progressPercentage,
+    0
+  );
+  return Math.round(total / courseProgress.value.length);
+});
 
-const maxMinutes = computed(() =>
-  Math.max(...activityData.value.map((d) => d.minutes))
-);
+onMounted(async () => {
+  await loadData();
+});
 
-const quizPerformance = ref([
-  {
-    id: "1",
-    courseName: "Piano Fundamentals",
-    quizName: "Chapter 6 Quiz",
-    score: 90,
-    attempts: 1,
-    passed: true,
-  },
-  {
-    id: "2",
-    courseName: "Piano Fundamentals",
-    quizName: "Chapter 5 Quiz",
-    score: 85,
-    attempts: 2,
-    passed: true,
-  },
-  {
-    id: "3",
-    courseName: "Guitar Mastery",
-    quizName: "Chapter 3 Quiz",
-    score: 70,
-    attempts: 1,
-    passed: false,
-  },
-  {
-    id: "4",
-    courseName: "Music Theory Advanced",
-    quizName: "Chapter 3 Quiz",
-    score: 95,
-    attempts: 1,
-    passed: true,
-  },
-]);
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const [progressData, statsData] = await Promise.all([
+      progressApi.getAllProgress(),
+      progressApi.getStudentStats(),
+    ]);
+    courseProgress.value = progressData;
+    stats.value = statsData;
+  } catch (error) {
+    console.error("Failed to load stats:", error);
+  } finally {
+    loading.value = false;
+  }
+};
 
-const skillsProgress = ref([
-  {
-    name: "Piano Technique",
-    level: "Intermediate",
-    progress: 65,
-    color: "bg-blue-600",
-  },
-  {
-    name: "Music Theory",
-    level: "Advanced",
-    progress: 80,
-    color: "bg-purple-600",
-  },
-  {
-    name: "Rhythm & Timing",
-    level: "Intermediate",
-    progress: 70,
-    color: "bg-green-600",
-  },
-  {
-    name: "Sight Reading",
-    level: "Beginner",
-    progress: 40,
-    color: "bg-yellow-600",
-  },
-]);
+const formatTime = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
 
-const achievements = ref([
-  {
-    id: "1",
-    icon: "🎯",
-    name: "First Steps",
-    description: "Complete 1st lesson",
-    unlocked: true,
-  },
-  {
-    id: "2",
-    icon: "🔥",
-    name: "Week Streak",
-    description: "7 days in a row",
-    unlocked: true,
-  },
-  {
-    id: "3",
-    icon: "i-lucide-star",
-    name: "Perfect Score",
-    description: "100% on a quiz",
-    unlocked: true,
-  },
-  {
-    id: "4",
-    icon: "i-lucide-book-open",
-    name: "Bookworm",
-    description: "Complete 10 chapters",
-    unlocked: false,
-  },
-  {
-    id: "5",
-    icon: "i-lucide-trophy",
-    name: "Champion",
-    description: "Pass all quizzes",
-    unlocked: false,
-  },
-  {
-    id: "6",
-    icon: "i-lucide-zap",
-    name: "Speed Learner",
-    description: "Complete in half time",
-    unlocked: false,
-  },
-]);
-
-const getScoreColor = (score: number) => {
-  if (score >= 90) return "text-green-600";
-  if (score >= 70) return "text-yellow-600";
-  return "text-red-600";
+const getProgressColor = (progress: number): string => {
+  if (progress >= 80) return "text-green-600";
+  if (progress >= 50) return "text-blue-600";
+  if (progress >= 25) return "text-yellow-600";
+  return "text-gray-600";
 };
 </script>

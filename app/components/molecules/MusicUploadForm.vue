@@ -2,16 +2,19 @@
   <UCard>
     <template #header>
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Upload Music</h3>
+        <h3 class="text-lg font-semibold">
+          {{ initialData ? "Edit Track" : "Upload Music" }}
+        </h3>
         <UButton color="neutral" variant="ghost" @click="$emit('close')">
           <X class="w-5 h-5" />
         </UButton>
       </div>
     </template>
 
-    <form @submit.prevent="handleSubmit" class="space-y-4">
-      <!-- File upload -->
+    <form class="space-y-4" @submit.prevent="handleSubmit">
+      <!-- File upload (disabled in edit mode) -->
       <div
+        v-if="!initialData"
         class="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
         <input
           ref="fileInput"
@@ -37,9 +40,55 @@
           <p class="text-xs text-gray-500">
             {{ formatFileSize(selectedFile.size) }}
           </p>
-          <UButton color="gray" variant="outline" size="sm" @click="clearFile">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            @click="clearFile">
             Change File
           </UButton>
+        </div>
+      </div>
+
+      <!-- File info display in edit mode -->
+      <div v-else class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          <Music class="w-4 h-4 inline mr-2" />
+          Audio file cannot be changed when editing
+        </p>
+      </div>
+
+      <!-- Cover Image upload -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium">Cover Image (Optional)</label>
+        <div class="flex items-center gap-4">
+          <div
+            v-if="imagePreviewUrl"
+            class="w-16 h-16 rounded overflow-hidden bg-gray-100 border">
+            <img
+              :src="imagePreviewUrl"
+              class="w-full h-full object-cover"
+              alt="Preview" />
+          </div>
+          <div class="flex-1">
+            <input
+              ref="imageInput"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleImageChange" />
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-image"
+              @click="() => imageInput?.click()">
+              {{ imagePreviewUrl ? "Change Cover" : "Upload Cover" }}
+            </UButton>
+            <span v-if="selectedImage" class="ml-2 text-sm text-gray-500">
+              {{ selectedImage.name }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -48,7 +97,8 @@
         <UInput
           v-model="formData.title"
           placeholder="Enter track title"
-          required />
+          required
+          class="w-full" />
       </UFormField>
 
       <!-- Description -->
@@ -56,22 +106,25 @@
         <UTextarea
           v-model="formData.description"
           placeholder="Describe your track..."
-          :rows="3" />
+          :rows="3"
+          class="w-full" />
       </UFormField>
 
       <!-- Genre -->
       <UFormField label="Genre" name="genre" required>
         <USelect
           v-model="formData.genre"
-          :options="genreOptions"
-          placeholder="Select genre" />
+          :items="genreOptions"
+          placeholder="Select genre"
+          class="w-full" />
       </UFormField>
 
       <!-- Tags -->
       <UFormField label="Tags" name="tags">
         <UInput
           v-model="tagsInput"
-          placeholder="e.g., piano, original, instrumental" />
+          placeholder="e.g., piano, original, instrumental"
+          class="w-full" />
       </UFormField>
 
       <!-- Upload progress -->
@@ -91,19 +144,21 @@
       <!-- Submit button -->
       <div class="flex justify-end gap-2">
         <UButton
-          color="gray"
+          color="neutral"
           variant="outline"
-          @click="$emit('close')"
-          :disabled="uploading">
+          :disabled="uploading"
+          @click="$emit('close')">
           Cancel
         </UButton>
         <UButton
           type="submit"
           color="primary"
-          :disabled="!selectedFile || !formData.title || uploading"
+          :disabled="
+            (!selectedFile && !initialData) || !formData.title || uploading
+          "
           :loading="uploading">
           <Upload class="w-4 h-4 mr-2" />
-          Upload Track
+          {{ initialData ? "Save Changes" : "Upload Track" }}
         </UButton>
       </div>
     </form>
@@ -111,8 +166,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
 import { Upload, Music, X } from "lucide-vue-next";
+import type { MusicTrack } from "~/types/music";
 
 interface UploadFormData {
   title: string;
@@ -120,12 +175,16 @@ interface UploadFormData {
   genre: string;
 }
 
+const props = defineProps<{
+  initialData?: MusicTrack | null;
+}>();
+
 const emit = defineEmits<{
   close: [];
   success: [];
 }>();
 
-const { uploadTrack } = useMusicApi();
+const { uploadTrack, updateTrack } = useMusicApi();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
@@ -137,6 +196,21 @@ const formData = ref<UploadFormData>({
   title: "",
   description: "",
   genre: "",
+});
+
+// Initialize form with existing data if editing
+onMounted(() => {
+  if (props.initialData) {
+    formData.value.title = props.initialData.title;
+    formData.value.description = props.initialData.description || "";
+    formData.value.genre = props.initialData.genre || "";
+    tagsInput.value = props.initialData.tags
+      ? props.initialData.tags.join(", ")
+      : "";
+    if (props.initialData.coverImageUrl) {
+      imagePreviewUrl.value = props.initialData.coverImageUrl;
+    }
+  }
 });
 
 const genreOptions = [
@@ -171,14 +245,28 @@ function clearFile() {
   }
 }
 
+const imageInput = ref<HTMLInputElement | null>(null);
+const selectedImage = ref<File | null>(null);
+const imagePreviewUrl = ref("");
+
+function handleImageChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file && file.type.includes("image")) {
+    selectedImage.value = file;
+    imagePreviewUrl.value = URL.createObjectURL(file);
+  }
+}
+
 async function handleSubmit() {
-  if (!selectedFile.value || !formData.value.title) return;
+  if ((!selectedFile.value && !props.initialData) || !formData.value.title)
+    return;
 
   uploading.value = true;
   uploadProgress.value = 0;
 
   try {
-    // Simulate progress (in real implementation, use XMLHttpRequest for progress)
+    // Simulate progress
     const progressInterval = setInterval(() => {
       if (uploadProgress.value < 90) {
         uploadProgress.value += 10;
@@ -190,24 +278,44 @@ async function handleSubmit() {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
-    // Get audio duration
-    const audio = new Audio();
-    const duration = await new Promise<number>((resolve) => {
-      audio.addEventListener("loadedmetadata", () => {
-        resolve(audio.duration / 60); // Convert to minutes
+    if (props.initialData) {
+      // Update existing track
+      await updateTrack(
+        props.initialData.id,
+        {
+          title: formData.value.title,
+          description: formData.value.description,
+          genre: formData.value.genre,
+          tags,
+          isPublic: true,
+        },
+        selectedImage.value || undefined
+      );
+    } else {
+      // Upload new track
+      // Get audio duration
+      const audio = new Audio();
+      const duration = await new Promise<number>((resolve) => {
+        audio.addEventListener("loadedmetadata", () => {
+          resolve(audio.duration / 60); // Convert to minutes
+        });
+        audio.src = URL.createObjectURL(selectedFile.value!);
       });
-      audio.src = URL.createObjectURL(selectedFile.value!);
-    });
 
-    await uploadTrack(selectedFile.value, {
-      title: formData.value.title,
-      description: formData.value.description,
-      genre: formData.value.genre,
-      tags,
-      isPublic: true,
-      duration,
-      fileSize: selectedFile.value.size,
-    });
+      await uploadTrack(
+        selectedFile.value!,
+        {
+          title: formData.value.title,
+          description: formData.value.description,
+          genre: formData.value.genre,
+          tags,
+          isPublic: true,
+          duration,
+          fileSize: selectedFile.value!.size,
+        },
+        selectedImage.value || undefined
+      );
+    }
 
     clearInterval(progressInterval);
     uploadProgress.value = 100;
@@ -218,8 +326,8 @@ async function handleSubmit() {
       emit("close");
     }, 500);
   } catch (error) {
-    console.error("Upload failed:", error);
-    alert("Failed to upload track. Please try again.");
+    console.error("Upload/Update failed:", error);
+    alert("Failed to save track. Please try again.");
   } finally {
     uploading.value = false;
   }

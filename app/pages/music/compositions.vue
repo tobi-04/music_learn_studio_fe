@@ -136,7 +136,7 @@ const {
   deleteComposition,
   duplicateComposition,
 } = useCompositionApi();
-const { confirm, confirmDelete } = useConfirm();
+const confirmDialog = useConfirmDialog();
 
 const drafts = ref<MusicComposition[]>([]);
 const published = ref<MusicComposition[]>([]);
@@ -206,39 +206,45 @@ function editComposition(compositionId: string) {
 }
 
 async function handleDelete(compositionId: string) {
-  const confirmed = await confirmDelete(
-    "Are you sure you want to delete this composition? This action cannot be undone."
-  );
-
-  if (confirmed) {
-    try {
-      await deleteComposition(compositionId);
-      // Refresh lists
-      loadDrafts();
-      loadPublished();
-      loadAll();
-    } catch (error) {
-      console.error("Failed to delete composition:", error);
-      alert("Failed to delete composition");
-    }
-  }
+  confirmDialog.open({
+    title: "Delete Composition?",
+    description:
+      "Are you sure you want to delete this composition? This action cannot be undone.",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    color: "error",
+    onConfirm: async () => {
+      try {
+        await deleteComposition(compositionId);
+        // Refresh lists
+        loadDrafts();
+        loadPublished();
+        loadAll();
+      } catch (error) {
+        console.error("Failed to delete composition:", error);
+        alert("Failed to delete composition");
+      }
+    },
+  });
 }
 
 async function handleDuplicate(compositionId: string) {
-  const confirmed = await confirm(
-    "Duplicate this composition?",
-    "A copy will be created as a new draft."
-  );
-
-  if (confirmed) {
-    try {
-      await duplicateComposition(compositionId);
-      loadDrafts();
-      loadAll();
-    } catch (error) {
-      console.error("Failed to duplicate composition:", error);
-      alert("Failed to duplicate composition");
-    }
-  }
+  confirmDialog.open({
+    title: "Duplicate Composition?",
+    description: "A copy will be created as a new draft.",
+    confirmLabel: "Duplicate",
+    cancelLabel: "Cancel",
+    color: "primary",
+    onConfirm: async () => {
+      try {
+        await duplicateComposition(compositionId);
+        loadDrafts();
+        loadAll();
+      } catch (error) {
+        console.error("Failed to duplicate composition:", error);
+        alert("Failed to duplicate composition");
+      }
+    },
+  });
 }
 </script>
