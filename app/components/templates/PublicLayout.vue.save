@@ -1,8 +1,8 @@
-<template>
-  <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+OBOBO<temOAplate>
+  <diOOOAv class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
     <header
-      class="bg-muted dark:bg-gray-800 border-b border-muted sticky top-0 z-40">
+      class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
       <div class="container mx-auto px-4 py-4">
         <nav class="flex items-center justify-between">
           <NuxtLink to="/" class="flex items-center gap-2">

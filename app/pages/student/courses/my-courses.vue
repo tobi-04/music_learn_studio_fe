@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen">
     <!-- Header -->
-    <header class="border-muted border-b sticky top-0 z-10">
+    <header class="border-muted border-b sticky top-0 z-10 bg-muted">
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold text-primary-600">MusicLearn Studio</h1>

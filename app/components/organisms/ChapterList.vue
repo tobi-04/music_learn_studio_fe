@@ -11,7 +11,7 @@
     </div>
 
     <div v-else class="space-y-2">
-      <AppCard
+      <UCard
         v-for="(chapter, index) in chapters"
         :key="chapter.id"
         class="hover:shadow-md transition-shadow cursor-pointer">
@@ -52,11 +52,11 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <AppBadge
+            <UBadge
               :color="chapter.isPublished ? 'green' : 'gray'"
               variant="soft">
               {{ chapter.isPublished ? "Đã xuất bản" : "Bản nháp" }}
-            </AppBadge>
+            </UBadge>
 
             <UButton
               size="xs"
@@ -80,7 +80,7 @@
               @click="$emit('delete', chapter)" />
           </div>
         </div>
-      </AppCard>
+      </UCard>
     </div>
   </div>
 </template>

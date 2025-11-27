@@ -1,6 +1,6 @@
 <template>
   <UForm :label="label" :error="error" :required="required">
-    <AppInput
+    <UInput
       v-model="internalValue"
       class="w-full"
       :placeholder="placeholder"

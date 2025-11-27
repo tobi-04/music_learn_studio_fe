@@ -1,5 +1,5 @@
 <template>
-  <AppCard class="course-card-skeleton">
+  <UCard class="course-card-skeleton">
     <!-- Thumbnail Skeleton -->
     <div class="aspect-video rounded-t-lg overflow-hidden">
       <USkeleton class="w-full h-full" />
@@ -44,7 +44,7 @@
         <USkeleton class="h-6 w-24 rounded-full" />
       </div>
     </div>
-  </AppCard>
+  </UCard>
 </template>
 
 <script setup lang="ts">

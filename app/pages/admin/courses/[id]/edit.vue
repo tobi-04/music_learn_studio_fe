@@ -11,13 +11,13 @@
       </div>
 
       <!-- Form Card -->
-      <AppCard>
+      <UCard>
         <CourseForm
           :initial-data="course"
           :loading="courseStore.loading"
           @submit="handleSubmit"
           @cancel="handleCancel" />
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

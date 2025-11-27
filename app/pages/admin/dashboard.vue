@@ -23,7 +23,7 @@
       </div>
 
       <!-- Quick Actions -->
-      <AppCard>
+      <UCard>
         <template #header>
           <h2 class="text-lg font-semibold">Quick Actions</h2>
         </template>
@@ -55,10 +55,10 @@
             Progress Reports
           </UButton>
         </div>
-      </AppCard>
+      </UCard>
 
       <!-- Recent Courses -->
-      <AppCard>
+      <UCard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">Recent Courses</h2>
@@ -87,7 +87,7 @@
         <div v-else class="text-center py-8 text-gray-500">
           No courses yet. Create your first course!
         </div>
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

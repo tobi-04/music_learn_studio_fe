@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen">
     <!-- Header -->
-    <header class="border-b sticky top-0 z-10 border-muted">
+    <header class="border-b sticky top-0 z-10 border-muted bg-muted">
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold text-primary-600">MusicLearn Studio</h1>
@@ -151,52 +151,15 @@
       </div>
     </main>
 
-    <!-- Purchase Modal -->
-    <UModal v-model:open="showPurchaseModal">
-      <template #header>
-        <h3 class="text-lg font-semibold">Purchase Course</h3>
-      </template>
-      <template #body>
-        <div v-if="selectedCourse" class="space-y-4 p-4">
-          <div class="text-center">
-            <h4 class="text-xl font-bold">{{ selectedCourse.title }}</h4>
-            <p class="text-gray-600 mt-2">{{ selectedCourse.description }}</p>
-          </div>
-
-          <div class="border-t pt-4">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-600">Price:</span>
-              <span class="text-2xl font-bold text-primary-600">
-                {{ formatPrice(selectedCourse.price || 0) }}
-              </span>
-            </div>
-          </div>
-
-          <div class="bg-yellow-50 p-4 rounded-lg">
-            <p class="text-yellow-800 text-sm">
-              <strong>Note:</strong> Payment integration coming soon. For demo
-              purposes, clicking "Confirm Purchase" will enroll you immediately.
-            </p>
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex gap-3 justify-end">
-          <UButton
-            color="neutral"
-            variant="outline"
-            @click="showPurchaseModal = false">
-            Cancel
-          </UButton>
-          <UButton
-            color="primary"
-            :loading="enrollingCourseId === selectedCourse?.id"
-            @click="confirmPurchase">
-            Confirm Purchase
-          </UButton>
-        </div>
-      </template>
-    </UModal>
+    <!-- Payment QR Modal -->
+    <PaymentQRModal
+      :is-open="showPaymentModal"
+      :qr-code-url="paymentData.qrCodeUrl"
+      :amount="paymentData.amount"
+      :description="paymentData.description"
+      :payment-id="paymentData.paymentId"
+      @close="closePaymentModal"
+      @success="handlePaymentSuccess" />
   </div>
 </template>
 
@@ -204,16 +167,26 @@
 import { useCourseStore } from "~/stores/admin/course";
 import { useProgressApi } from "~/composables/useProgressApi";
 import type { CourseResponse } from "~/types";
+import PaymentQRModal from "~/components/PaymentQRModal.vue";
 
 const courseStore = useCourseStore();
 const progressApi = useProgressApi();
 const toast = useToast();
+const { createPayment } = usePayment();
 
 const loading = ref(false);
 const enrollingCourseId = ref<string | null>(null);
 const enrolledCourseIds = ref<string[]>([]);
-const showPurchaseModal = ref(false);
-const selectedCourse = ref<CourseResponse | null>(null);
+
+// Payment modal state
+const showPaymentModal = ref(false);
+const paymentData = ref({
+  qrCodeUrl: "",
+  amount: 0,
+  description: "",
+  paymentId: "",
+});
+const purchasingCourseId = ref<string | null>(null);
 
 const filters = ref({
   level: "",
@@ -288,9 +261,8 @@ const handleEnroll = async (course: CourseResponse) => {
       description: `You are now enrolled in "${course.title}"`,
       color: "success",
     });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to enroll";
+  } catch (error: any) {
+    const errorMessage = error?.data?.message || "Failed to enroll";
     toast.add({
       title: "Enrollment failed",
       description: errorMessage,
@@ -301,37 +273,49 @@ const handleEnroll = async (course: CourseResponse) => {
   }
 };
 
-const handlePurchase = (course: CourseResponse) => {
-  selectedCourse.value = course;
-  showPurchaseModal.value = true;
-};
-
-const confirmPurchase = async () => {
-  if (!selectedCourse.value) return;
-
-  // For demo: enroll directly after "purchase"
-  enrollingCourseId.value = selectedCourse.value.id;
+const handlePurchase = async (course: CourseResponse) => {
+  purchasingCourseId.value = course.id;
   try {
-    await progressApi.enrollCourse(selectedCourse.value.id);
-    enrolledCourseIds.value.push(selectedCourse.value.id);
+    // Create payment and get QR code
+    const payment = await createPayment(course.id);
+
+    // Set payment data for modal
+    paymentData.value = {
+      qrCodeUrl: payment.qrCodeUrl,
+      amount: payment.amount,
+      description: payment.description || `Payment for ${course.title}`,
+      paymentId: payment.id,
+    };
+
+    // Show payment modal
+    showPaymentModal.value = true;
+  } catch (error: any) {
+    console.error("Error creating payment:", error);
     toast.add({
-      title: "Purchase successful!",
-      description: `You are now enrolled in "${selectedCourse.value.title}"`,
-      color: "success",
-    });
-    showPurchaseModal.value = false;
-    selectedCourse.value = null;
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to process purchase";
-    toast.add({
-      title: "Purchase failed",
-      description: errorMessage,
+      title: "Payment Creation Failed",
+      description:
+        error?.data?.message || "Unable to create payment. Please try again.",
       color: "error",
     });
   } finally {
-    enrollingCourseId.value = null;
+    purchasingCourseId.value = null;
   }
+};
+
+const closePaymentModal = () => {
+  showPaymentModal.value = false;
+};
+
+const handlePaymentSuccess = async () => {
+  // Reload enrolled courses
+  const progressList = await progressApi.getAllProgress();
+  enrolledCourseIds.value = progressList.map((p) => p.courseId);
+
+  toast.add({
+    title: "Payment Successful!",
+    description: "You are now enrolled in the course",
+    color: "success",
+  });
 };
 
 const continueLearning = (courseId: string) => {

@@ -3,7 +3,7 @@
     <!-- Filters -->
     <div class="flex flex-wrap gap-3">
       <div class="flex-1 min-w-[200px]">
-        <AppInput
+        <UInput
           v-model="searchQuery"
           placeholder="Search courses..."
           icon="i-heroicons-magnifying-glass" />

@@ -36,7 +36,7 @@
         v-for="comment in comments"
         :key="comment.id"
         class="flex gap-3 p-3 rounded-lg bg-gray-50">
-        <AppAvatar :name="comment.username" size="sm" />
+        <UAvatar :name="comment.username" size="sm" />
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">

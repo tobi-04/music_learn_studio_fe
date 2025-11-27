@@ -42,7 +42,7 @@
           class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
           <ClientOnly>
             <div class="flex items-center gap-3">
-              <AppAvatar
+              <UAvatar
                 :src="user?.avatar || ''"
                 :alt="user?.name || 'Admin'"
                 size="sm" />

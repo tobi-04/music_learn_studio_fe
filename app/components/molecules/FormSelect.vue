@@ -1,9 +1,9 @@
 <template>
   <UForm :label="label" :error="error" :required="required">
-    <AppSelect
+    <USelect
       v-model="internalValue"
       class="w-full"
-      :options="options"
+      :items="options"
       :placeholder="placeholder"
       :disabled="disabled" />
   </UForm>

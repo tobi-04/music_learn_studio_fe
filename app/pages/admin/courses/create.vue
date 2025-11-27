@@ -10,12 +10,12 @@
       </div>
 
       <!-- Course Form -->
-      <AppCard>
+      <UCard>
         <CourseForm
           :loading="courseStore.loading"
           @submit="handleSubmit"
           @cancel="handleCancel" />
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

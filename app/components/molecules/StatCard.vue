@@ -1,5 +1,5 @@
 <template>
-  <AppCard>
+  <UCard>
     <div class="flex items-center justify-between">
       <div class="space-y-1">
         <p class="text-sm text-gray-600 dark:text-gray-400">{{ label }}</p>
@@ -10,7 +10,7 @@
       </div>
       <UIcon v-if="icon" :name="icon" class="w-10 h-10" :class="iconColor" />
     </div>
-  </AppCard>
+  </UCard>
 </template>
 
 <script setup lang="ts">

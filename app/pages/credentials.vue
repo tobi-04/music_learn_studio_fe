@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-background flex items-center justify-center p-4">
-    <AppCard class="max-w-md w-full">
+    <UCard class="max-w-md w-full">
       <template #header>
         <h2 class="text-2xl font-bold text-center">🔑 Thông tin đăng nhập</h2>
       </template>
@@ -59,7 +59,7 @@
           </NuxtLink>
         </div>
       </div>
-    </AppCard>
+    </UCard>
   </div>
 </template>
 

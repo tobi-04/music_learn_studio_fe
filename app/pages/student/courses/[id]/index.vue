@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen">
     <!-- Header -->
-    <header class="border-muted border-b sticky top-0 z-10">
+    <header class="border-muted border-b sticky top-0 z-10 bg-muted">
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
@@ -15,7 +15,7 @@
               MusicLearn Studio
             </h1>
           </div>
-          <AppAvatar :name="studentName" size="md" />
+          <UAvatar :name="studentName" size="md" />
         </div>
       </div>
     </header>
@@ -35,9 +35,9 @@
               <h1 class="text-4xl font-bold mb-3">{{ course.title }}</h1>
               <p class="text-gray-600 text-lg">{{ course.description }}</p>
             </div>
-            <AppBadge :color="getLevelColor(course.level)" size="lg">
+            <UBadge :color="getLevelColor(course.level)" size="lg">
               {{ course.level }}
-            </AppBadge>
+            </UBadge>
           </div>
 
           <div class="grid grid-cols-3 gap-6 mb-6">
@@ -80,7 +80,7 @@
         </div>
 
         <!-- Course Curriculum -->
-        <AppCard>
+        <UCard>
           <template #header>
             <h2 class="text-2xl font-semibold">Course Curriculum</h2>
           </template>
@@ -131,7 +131,7 @@
               </div>
             </div>
           </div>
-        </AppCard>
+        </UCard>
       </div>
     </main>
 

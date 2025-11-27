@@ -30,7 +30,7 @@
       </div>
 
       <!-- Course Progress -->
-      <AppCard>
+      <UCard>
         <template #header>
           <h2 class="text-lg font-semibold">Tiến độ theo khóa học</h2>
         </template>
@@ -50,9 +50,9 @@
             class="border rounded-lg p-4">
             <div class="flex items-center justify-between mb-3">
               <h3 class="font-semibold">{{ course.name }}</h3>
-              <AppBadge color="blue">
+              <UBadge color="blue">
                 {{ course.enrolledStudents }} học viên
-              </AppBadge>
+              </UBadge>
             </div>
             <div class="space-y-2">
               <div class="flex items-center justify-between text-sm">
@@ -67,7 +67,7 @@
             </div>
           </div>
         </div>
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

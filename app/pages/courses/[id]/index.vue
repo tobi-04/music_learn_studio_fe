@@ -203,11 +203,22 @@
       <UButton @click="navigateTo('/courses')">Browse All Courses</UButton>
     </div>
   </PublicLayout>
+
+  <!-- Payment QR Modal -->
+  <PaymentQRModal
+    :is-open="showPaymentModal"
+    :qr-code-url="paymentData.qrCodeUrl"
+    :amount="paymentData.amount"
+    :description="paymentData.description"
+    :payment-id="paymentData.paymentId"
+    @close="closePaymentModal"
+    @success="handlePaymentSuccess" />
 </template>
 
 <script setup lang="ts">
 import type { CourseWithDetailsResponse, CourseLevel } from "~/types";
 import { usePublicCourseApi } from "~/composables/api/usePublicCourseApi";
+import PaymentQRModal from "~/components/PaymentQRModal.vue";
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -219,10 +230,21 @@ const isEnrolled = ref(false);
 const enrolling = ref(false);
 const purchasing = ref(false);
 
+// Payment modal state
+const showPaymentModal = ref(false);
+const paymentData = ref({
+  qrCodeUrl: "",
+  amount: 0,
+  description: "",
+  paymentId: "",
+});
+
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const isPaidCourse = computed(
   () => course.value?.price && course.value.price > 0
 );
+
+const { createPayment } = usePayment();
 
 const getLevelColor = (level: CourseLevel) => {
   const colors: Record<CourseLevel, string> = {
@@ -287,11 +309,11 @@ const handleEnroll = async () => {
 
     // Navigate to first chapter
     goToFirstChapter();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error enrolling:", error);
     useToast().add({
       title: "Enrollment Failed",
-      description: "Please try again later",
+      description: error?.data?.message || "Please try again later",
       color: "error",
     });
   } finally {
@@ -300,18 +322,60 @@ const handleEnroll = async () => {
 };
 
 const handlePurchase = async () => {
-  // TODO: Implement payment flow
-  purchasing.value = true;
+  if (!course.value || !authStore.user) return;
+
+  try {
+    purchasing.value = true;
+
+    // Create payment and get QR code
+    const payment = await createPayment(course.value.id);
+
+    // Set payment data for modal
+    paymentData.value = {
+      qrCodeUrl: payment.qrCodeUrl,
+      amount: payment.amount,
+      description: payment.description || `Payment for ${course.value.title}`,
+      paymentId: payment.id,
+    };
+
+    // Show payment modal
+    showPaymentModal.value = true;
+  } catch (error: any) {
+    console.error("Error creating payment:", error);
+    useToast().add({
+      title: "Payment Creation Failed",
+      description:
+        error?.data?.message || "Unable to create payment. Please try again.",
+      color: "error",
+    });
+  } finally {
+    purchasing.value = false;
+  }
+};
+
+const closePaymentModal = () => {
+  showPaymentModal.value = false;
+};
+
+const handlePaymentSuccess = async () => {
+  // Reload enrollment status
+  if (course.value && authStore.user) {
+    isEnrolled.value = await publicCourseApi.checkEnrollment(
+      course.value.id,
+      authStore.user.id
+    );
+  }
 
   useToast().add({
-    title: "Payment Coming Soon",
-    description: "Payment integration will be implemented soon",
-    color: "info",
+    title: "Payment Successful!",
+    description: "You are now enrolled in the course",
+    color: "success",
   });
 
-  setTimeout(() => {
-    purchasing.value = false;
-  }, 1000);
+  // Navigate to course page (not first chapter)
+  if (course.value) {
+    navigateTo(`/student/courses/${course.value.id}`);
+  }
 };
 
 const goToFirstChapter = () => {
@@ -322,7 +386,7 @@ const goToFirstChapter = () => {
   ) {
     const firstChapter = course.value.chapters[0];
     navigateTo(
-      `/student/courses/${course.value.id}/chapters/${firstChapter.id}`
+      `/student/courses/${course.value.id}/chapters/${firstChapter?.id}`
     );
   }
 };

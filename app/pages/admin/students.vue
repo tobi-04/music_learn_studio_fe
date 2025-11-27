@@ -5,7 +5,7 @@
         <h1 class="text-2xl font-bold">Quản lý học viên</h1>
       </div>
 
-      <AppCard>
+      <UCard>
         <template #header>
           <h2 class="text-lg font-semibold">Danh sách học viên</h2>
         </template>
@@ -41,17 +41,17 @@
                 </td>
                 <td class="py-3 px-4">{{ student.enrolledCourses || 0 }}</td>
                 <td class="py-3 px-4">
-                  <AppBadge
+                  <UBadge
                     :color="student.isLocked ? 'red' : 'green'"
                     variant="soft">
                     {{ student.isLocked ? "Khóa" : "Hoạt động" }}
-                  </AppBadge>
+                  </UBadge>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

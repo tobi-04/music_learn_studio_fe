@@ -20,7 +20,7 @@
       </div>
 
       <!-- Course Info Card -->
-      <AppCard>
+      <UCard>
         <template #header>
           <h2 class="text-lg font-semibold">Course Information</h2>
         </template>
@@ -36,19 +36,19 @@
           </div>
           <div>
             <label class="text-sm text-gray-500">Status</label>
-            <AppBadge :color="course?.isPublished ? 'green' : 'gray'">
+            <UBadge :color="course?.isPublished ? 'green' : 'gray'">
               {{ course?.isPublished ? "Published" : "Draft" }}
-            </AppBadge>
+            </UBadge>
           </div>
           <div>
             <label class="text-sm text-gray-500">Total Chapters</label>
             <p class="font-medium">{{ course?.totalChapters || 0 }}</p>
           </div>
         </div>
-      </AppCard>
+      </UCard>
 
       <!-- Chapters Card -->
-      <AppCard>
+      <UCard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">Chapters</h2>
@@ -102,12 +102,12 @@
                 </div>
               </div>
             </div>
-            <AppBadge :color="chapter.isPublished ? 'green' : 'gray'">
+            <UBadge :color="chapter.isPublished ? 'green' : 'gray'">
               {{ chapter.isPublished ? "Published" : "Draft" }}
-            </AppBadge>
+            </UBadge>
           </div>
         </div>
-      </AppCard>
+      </UCard>
     </div>
   </AdminLayout>
 </template>

@@ -1,6 +1,6 @@
 <template>
   <div class="sheet-uploader">
-    <UFormGroup :label="label" :error="error" :required="required">
+    <UForm :label="label" :error="error" :required="required">
       <div class="space-y-3">
         <!-- File Input -->
         <div
@@ -76,7 +76,7 @@
           <UProgress :value="uploadProgress" />
         </div>
       </div>
-    </UFormGroup>
+    </UForm>
   </div>
 </template>
 
