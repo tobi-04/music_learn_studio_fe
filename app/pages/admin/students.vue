@@ -42,7 +42,7 @@
                 <td class="py-3 px-4">{{ student.enrolledCourses || 0 }}</td>
                 <td class="py-3 px-4">
                   <UBadge
-                    :color="student.isLocked ? 'red' : 'green'"
+                    :color="student.isLocked ? 'error' : 'success'"
                     variant="soft">
                     {{ student.isLocked ? "Khóa" : "Hoạt động" }}
                   </UBadge>
@@ -73,6 +73,7 @@ definePageMeta({
 
 const loading = ref(false);
 const students = ref<Student[]>([]);
+const { getAllStudents } = useProgressApi();
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -83,10 +84,8 @@ const formatDate = (dateString: string) => {
 onMounted(async () => {
   loading.value = true;
   try {
-    // TODO: Call API to get students
-    // const response = await useAuthApi().getAllUsers();
-    // students.value = response.data;
-    students.value = [];
+    const data = await getAllStudents();
+    students.value = data;
   } catch (error) {
     console.error("Error loading students:", error);
   } finally {

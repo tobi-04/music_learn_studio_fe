@@ -6,6 +6,9 @@
 import type {
   UserCourseProgressResponse,
   StudentStatsResponse,
+  StudentResponse,
+  AdminProgressStatsResponse,
+  CourseProgressStatsResponse,
 } from "~/types/progress";
 
 interface ApiResponse<T> {
@@ -105,11 +108,56 @@ export function useProgressApi() {
     return response.data;
   };
 
+  /**
+   * Get all students (Admin)
+   */
+  const getAllStudents = async (): Promise<StudentResponse[]> => {
+    const response = await $fetch<ApiResponse<StudentResponse[]>>(
+      `${baseUrl}/admin/students`,
+      {
+        headers: getHeaders(),
+      }
+    );
+    return response.data || [];
+  };
+
+  /**
+   * Get admin progress stats
+   */
+  const getAdminProgressStats =
+    async (): Promise<AdminProgressStatsResponse> => {
+      const response = await $fetch<ApiResponse<AdminProgressStatsResponse>>(
+        `${baseUrl}/admin/stats`,
+        {
+          headers: getHeaders(),
+        }
+      );
+      return response.data;
+    };
+
+  /**
+   * Get course progress stats (Admin)
+   */
+  const getCourseProgressStats = async (): Promise<
+    CourseProgressStatsResponse[]
+  > => {
+    const response = await $fetch<ApiResponse<CourseProgressStatsResponse[]>>(
+      `${baseUrl}/admin/courses`,
+      {
+        headers: getHeaders(),
+      }
+    );
+    return response.data || [];
+  };
+
   return {
     getAllProgress,
     getCourseProgress,
     enrollCourse,
     markChapterComplete,
     getStudentStats,
+    getAllStudents,
+    getAdminProgressStats,
+    getCourseProgressStats,
   };
 }

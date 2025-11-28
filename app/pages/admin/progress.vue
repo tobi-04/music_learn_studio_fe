@@ -86,6 +86,7 @@ definePageMeta({
 });
 
 const loading = ref(false);
+const { getAdminProgressStats, getCourseProgressStats } = useProgressApi();
 
 const stats = ref({
   totalStudents: 0,
@@ -100,11 +101,18 @@ const courseProgress = ref<CourseProgress[]>([]);
 onMounted(async () => {
   loading.value = true;
   try {
-    // TODO: Call API to get progress data
-    // const response = await useProgressApi().getOverallProgress();
-    // stats.value = response.data.stats;
-    // courseProgress.value = response.data.courses;
-    courseProgress.value = [];
+    const [statsData, coursesData] = await Promise.all([
+      getAdminProgressStats(),
+      getCourseProgressStats(),
+    ]);
+
+    if (statsData) {
+      stats.value = statsData;
+    }
+
+    if (coursesData) {
+      courseProgress.value = coursesData;
+    }
   } catch (error) {
     console.error("Error loading progress:", error);
   } finally {

@@ -28,6 +28,24 @@
             <span>Courses</span>
           </NuxtLink>
 
+          <!-- Students -->
+          <NuxtLink
+            to="/admin/students"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            active-class="bg-primary-50 dark:bg-primary-900 text-primary-600">
+            <UIcon name="i-lucide-users" class="w-5 h-5" />
+            <span>Students</span>
+          </NuxtLink>
+
+          <!-- Progress -->
+          <NuxtLink
+            to="/admin/progress"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            active-class="bg-primary-50 dark:bg-primary-900 text-primary-600">
+            <UIcon name="i-lucide-bar-chart" class="w-5 h-5" />
+            <span>Progress Reports</span>
+          </NuxtLink>
+
           <!-- Analytics -->
           <NuxtLink
             to="/admin/analytics"

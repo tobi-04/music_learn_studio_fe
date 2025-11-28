@@ -34,6 +34,29 @@ export interface StudentStatsResponse {
   completionRate: number;
 }
 
+export interface StudentResponse {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  enrolledCourses: number;
+  isLocked: boolean;
+}
+
+export interface AdminProgressStatsResponse {
+  totalStudents: number;
+  completedLessons: number;
+  avgHours: number;
+  avgQuizScore: number;
+}
+
+export interface CourseProgressStatsResponse {
+  id: string;
+  name: string;
+  enrolledStudents: number;
+  completionRate: number;
+}
+
 export interface MarkChapterCompleteRequest {
   timeSpentMinutes?: number;
 }

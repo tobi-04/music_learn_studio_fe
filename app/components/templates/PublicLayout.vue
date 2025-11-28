@@ -166,6 +166,6 @@ const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const handleLogout = async () => {
   await authStore.logout();
-  navigateTo("/");
+  await navigateTo("/auth/login", { replace: true });
 };
 </script>
