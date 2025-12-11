@@ -150,6 +150,16 @@ export function useProgressApi() {
     return response.data || [];
   };
 
+  /**
+   * Delete a student (Admin)
+   */
+  const deleteStudent = async (studentId: string): Promise<void> => {
+    await $fetch(`${baseUrl}/admin/students/${studentId}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+  };
+
   return {
     getAllProgress,
     getCourseProgress,
@@ -157,6 +167,7 @@ export function useProgressApi() {
     markChapterComplete,
     getStudentStats,
     getAllStudents,
+    deleteStudent,
     getAdminProgressStats,
     getCourseProgressStats,
   };

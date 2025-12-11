@@ -27,6 +27,7 @@
                 <th class="text-left py-3 px-4">Ngày đăng ký</th>
                 <th class="text-left py-3 px-4">Khóa học</th>
                 <th class="text-left py-3 px-4">Trạng thái</th>
+                <th class="text-left py-3 px-4">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -47,12 +48,55 @@
                     {{ student.isLocked ? "Khóa" : "Hoạt động" }}
                   </UBadge>
                 </td>
+                <td class="py-3 px-4">
+                  <UButton
+                    color="error"
+                    variant="soft"
+                    size="sm"
+                    :loading="deletingId === student.id"
+                    @click="confirmDelete(student)">
+                    Xóa
+                  </UButton>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </UCard>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <UModal v-model:open="showDeleteModal">
+      <template #content>
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-semibold text-red-600">Xác nhận xóa</h3>
+          </template>
+          <p>
+            Bạn có chắc chắn muốn xóa học viên
+            <strong>{{ studentToDelete?.name }}</strong> ({{
+              studentToDelete?.email
+            }})?
+          </p>
+          <p class="text-sm text-gray-500 mt-2">
+            Hành động này không thể hoàn tác.
+          </p>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton variant="ghost" @click="showDeleteModal = false">
+                Hủy
+              </UButton>
+              <UButton
+                color="error"
+                :loading="deletingId !== null"
+                @click="handleDelete">
+                Xóa
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
   </AdminLayout>
 </template>
 
@@ -73,11 +117,50 @@ definePageMeta({
 
 const loading = ref(false);
 const students = ref<Student[]>([]);
-const { getAllStudents } = useProgressApi();
+const { getAllStudents, deleteStudent } = useProgressApi();
+
+const showDeleteModal = ref(false);
+const studentToDelete = ref<Student | null>(null);
+const deletingId = ref<string | null>(null);
+
+const toast = useToast();
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN");
+};
+
+const confirmDelete = (student: Student) => {
+  studentToDelete.value = student;
+  showDeleteModal.value = true;
+};
+
+const handleDelete = async () => {
+  if (!studentToDelete.value) return;
+
+  deletingId.value = studentToDelete.value.id;
+  try {
+    await deleteStudent(studentToDelete.value.id);
+    students.value = students.value.filter(
+      (s) => s.id !== studentToDelete.value!.id
+    );
+    toast.add({
+      title: "Thành công",
+      description: "Đã xóa học viên thành công",
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting student:", error);
+    toast.add({
+      title: "Lỗi",
+      description: "Không thể xóa học viên",
+      color: "error",
+    });
+  } finally {
+    deletingId.value = null;
+    showDeleteModal.value = false;
+    studentToDelete.value = null;
+  }
 };
 
 // Load students on mount
